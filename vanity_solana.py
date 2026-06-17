@@ -2,56 +2,72 @@ import os
 import sys
 import time
 import base58
-from solders.keypair import Keypair  # Doğru import!
+import threading
+from solders.keypair import Keypair
+from flask import Flask
 
-# Hedef kalıplar
+app = Flask(__name__)
 TARGET_PREFIX = "GVyByL"
 TARGET_SUFFIX = "Cpap"
 MAX_ATTEMPTS = 1000000
+FOUND = False
+WALLET_DATA = {}
 
 def generate_vanity():
-    print(f"[*] Hedef: '{TARGET_PREFIX}' ile başlayıp '{TARGET_SUFFIX}' ile biten adres aranıyor...")
-    print(f"[*] En fazla {MAX_ATTEMPTS} deneme yapılacak.")
-    
+    global FOUND, WALLET_DATA
+    print(f"[*] Aranıyor: '{TARGET_PREFIX}' ile başlayıp '{TARGET_SUFFIX}' ile biten...")
     start_time = time.time()
     attempt = 0
     
-    while attempt < MAX_ATTEMPTS:
+    while attempt < MAX_ATTEMPTS and not FOUND:
         attempt += 1
-        # Gerçek Solana anahtar çifti oluştur
         keypair = Keypair()
         address = str(keypair.pubkey())
         
         if address.startswith(TARGET_PREFIX) and address.endswith(TARGET_SUFFIX):
             elapsed = time.time() - start_time
-            print("\n" + "="*50)
-            print(f"[✓] BAŞARILI! ({attempt} denemede, {elapsed:.2f} saniye)")
-            print(f"[✓] Adres: {address}")
-            # Özel anahtarı base58 olarak al
             private_key = base58.b58encode(bytes(keypair.secret_key())).decode()
+            FOUND = True
+            WALLET_DATA = {
+                "address": address,
+                "private_key": private_key,
+                "attempts": attempt,
+                "time": f"{elapsed:.2f} saniye"
+            }
+            print("\n" + "="*50)
+            print(f"[✓] BULUNDU! ({attempt} denemede, {elapsed:.2f}s)")
+            print(f"[✓] Adres: {address}")
             print(f"[✓] Özel Anahtar: {private_key}")
             print("="*50)
-            
-            # Dosyaya kaydet
             with open("found_wallet.txt", "w") as f:
-                f.write(f"Adres: {address}\n")
-                f.write(f"Özel Anahtar: {private_key}\n")
-                f.write(f"Deneme: {attempt}\n")
-                f.write(f"Süre: {elapsed:.2f} saniye\n")
+                f.write(f"Adres: {address}\nÖzel Anahtar: {private_key}\nDeneme: {attempt}\nSüre: {elapsed:.2f}s\n")
             print("[+] found_wallet.txt kaydedildi.")
-            return True
+            return
             
         if attempt % 10000 == 0:
             print(f"[*] {attempt} deneme oldu, aranıyor...")
     
-    print(f"[!] {MAX_ATTEMPTS} deneme yapıldı, bulunamadı.")
-    return False
+    if not FOUND:
+        print(f"[!] {MAX_ATTEMPTS} denemede bulunamadı.")
+
+@app.route('/')
+def home():
+    if FOUND:
+        return f"""
+        <h2>✅ Bulundu!</h2>
+        <p><b>Adres:</b> {WALLET_DATA['address']}</p>
+        <p><b>Özel Anahtar:</b> {WALLET_DATA['private_key']}</p>
+        <p><b>Deneme:</b> {WALLET_DATA['attempts']}</p>
+        <p><b>Süre:</b> {WALLET_DATA['time']}</p>
+        """
+    else:
+        return "<h2>⏳ Aranıyor...</h2><p>Henüz uygun adres bulunamadı. Logları kontrol et.</p>"
 
 if __name__ == "__main__":
-    try:
-        generate_vanity()
-    except KeyboardInterrupt:
-        print("\n[!] Durduruldu.")
-    except Exception as e:
-        print(f"[!] Hata: {e}")
-        sys.exit(1)
+    # Anahtar arayıcıyı arka planda başlat
+    thread = threading.Thread(target=generate_vanity)
+    thread.daemon = True
+    thread.start()
+    
+    # Flask sunucusunu başlat (Render'ın beklediği şey bu)
+    app.run(host='0.0.0.0', port=10000)
