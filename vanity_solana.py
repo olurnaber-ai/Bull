@@ -2,20 +2,19 @@ import os
 import sys
 import time
 import base58
-import threading
 from solders.keypair import Keypair
 from flask import Flask
 
 app = Flask(__name__)
 TARGET_PREFIX = "GVyByL"
 TARGET_SUFFIX = "Cpap"
-MAX_ATTEMPTS = 1000000
+MAX_ATTEMPTS = 100000
 FOUND = False
 WALLET_DATA = {}
 
 def generate_vanity():
     global FOUND, WALLET_DATA
-    print(f"[*] Aranıyor: '{TARGET_PREFIX}' ile başlayıp '{TARGET_SUFFIX}' ile biten...")
+    print(f"[*] Aranıyor: '{TARGET_PREFIX}' ile başlayıp '{TARGET_SUFFIX}' ile biten...", flush=True)
     start_time = time.time()
     attempt = 0
     
@@ -34,21 +33,21 @@ def generate_vanity():
                 "attempts": attempt,
                 "time": f"{elapsed:.2f} saniye"
             }
-            print("\n" + "="*50)
-            print(f"[✓] BULUNDU! ({attempt} denemede, {elapsed:.2f}s)")
-            print(f"[✓] Adres: {address}")
-            print(f"[✓] Özel Anahtar: {private_key}")
-            print("="*50)
+            print("\n" + "="*50, flush=True)
+            print(f"[✓] BULUNDU! ({attempt} denemede, {elapsed:.2f}s)", flush=True)
+            print(f"[✓] Adres: {address}", flush=True)
+            print(f"[✓] Özel Anahtar: {private_key}", flush=True)
+            print("="*50, flush=True)
             with open("found_wallet.txt", "w") as f:
                 f.write(f"Adres: {address}\nÖzel Anahtar: {private_key}\nDeneme: {attempt}\nSüre: {elapsed:.2f}s\n")
-            print("[+] found_wallet.txt kaydedildi.")
+            print("[+] found_wallet.txt kaydedildi.", flush=True)
             return
             
         if attempt % 10000 == 0:
-            print(f"[*] {attempt} deneme oldu, aranıyor...")
+            print(f"[*] {attempt} deneme oldu, aranıyor...", flush=True)
     
     if not FOUND:
-        print(f"[!] {MAX_ATTEMPTS} denemede bulunamadı.")
+        print(f"[!] {MAX_ATTEMPTS} denemede bulunamadı.", flush=True)
 
 @app.route('/')
 def home():
@@ -64,10 +63,7 @@ def home():
         return "<h2>⏳ Aranıyor...</h2><p>Henüz uygun adres bulunamadı. Logları kontrol et.</p>"
 
 if __name__ == "__main__":
-    # Anahtar arayıcıyı arka planda başlat
-    thread = threading.Thread(target=generate_vanity)
-    thread.daemon = True
-    thread.start()
-    
-    # Flask sunucusunu başlat (Render'ın beklediği şey bu)
+    # Arayıcıyı doğrudan ana thread'de başlat
+    generate_vanity()
+    # Flask sunucusunu başlat (sadece bulunduğunda güncel sonuç gösterir)
     app.run(host='0.0.0.0', port=10000)
