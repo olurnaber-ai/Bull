@@ -6,9 +6,13 @@ from solders.keypair import Keypair
 from flask import Flask
 
 app = Flask(__name__)
-TARGET_PREFIX = "GVyByL"
-TARGET_SUFFIX = "Cpap"
-MAX_ATTEMPTS = 100000
+
+# ===== DEĞİŞTİRİLEN KISIM =====
+TARGET_PREFIX = "GV"      # Sadece "GV" ile başlasın (daha geniş)
+TARGET_SUFFIX = "ap"      # "ap" ile bitsin (daha geniş)
+MAX_ATTEMPTS = 500000     # 500 bin deneme
+# ================================
+
 FOUND = False
 WALLET_DATA = {}
 
@@ -63,7 +67,5 @@ def home():
         return "<h2>⏳ Aranıyor...</h2><p>Henüz uygun adres bulunamadı. Logları kontrol et.</p>"
 
 if __name__ == "__main__":
-    # Arayıcıyı doğrudan ana thread'de başlat
     generate_vanity()
-    # Flask sunucusunu başlat (sadece bulunduğunda güncel sonuç gösterir)
     app.run(host='0.0.0.0', port=10000)
