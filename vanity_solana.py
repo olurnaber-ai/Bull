@@ -2,19 +2,12 @@ import os
 import sys
 import time
 import base58
-from solana.keypair import Keypair  # Bu import bazı sürümlerde sorun çıkarıyor
-
-# Alternatif import (daha yeni sürümler için)
-try:
-    from solana.keypair import Keypair
-except ImportError:
-    # Eğer yukarıdaki olmazsa, bu alternatifi dene
-    from solders.keypair import Keypair
+from solders.keypair import Keypair  # Doğru import!
 
 # Hedef kalıplar
 TARGET_PREFIX = "GVyByL"
 TARGET_SUFFIX = "Cpap"
-MAX_ATTEMPTS = 500000
+MAX_ATTEMPTS = 1000000
 
 def generate_vanity():
     print(f"[*] Hedef: '{TARGET_PREFIX}' ile başlayıp '{TARGET_SUFFIX}' ile biten adres aranıyor...")
@@ -25,6 +18,7 @@ def generate_vanity():
     
     while attempt < MAX_ATTEMPTS:
         attempt += 1
+        # Gerçek Solana anahtar çifti oluştur
         keypair = Keypair()
         address = str(keypair.pubkey())
         
@@ -33,10 +27,12 @@ def generate_vanity():
             print("\n" + "="*50)
             print(f"[✓] BAŞARILI! ({attempt} denemede, {elapsed:.2f} saniye)")
             print(f"[✓] Adres: {address}")
+            # Özel anahtarı base58 olarak al
             private_key = base58.b58encode(bytes(keypair.secret_key())).decode()
             print(f"[✓] Özel Anahtar: {private_key}")
             print("="*50)
             
+            # Dosyaya kaydet
             with open("found_wallet.txt", "w") as f:
                 f.write(f"Adres: {address}\n")
                 f.write(f"Özel Anahtar: {private_key}\n")
